@@ -1,11 +1,10 @@
 """Stage 7 — Data drift detection with EvidentlyAI.
 
 Compares the train distribution vs the test distribution and generates
-an HTML drift report. Exits with code 1 if dataset drift is detected.
+an HTML drift report.
 """
 import logging
 import os
-import sys
 
 import pandas as pd
 import yaml
@@ -29,15 +28,14 @@ def run(cfg: dict) -> None:
     df_train = pd.read_parquet(train_path)
     df_test = pd.read_parquet(test_path)
 
-    # Only use feature columns (exclude target) for drift analysis
     feature_cols = [c for c in df_train.columns if c != target]
     ref = df_train[feature_cols]
     cur = df_test[feature_cols]
 
     try:
-        from evidently import ColumnMapping
-        from evidently.metric_preset import DataDriftPreset
-        from evidently.report import Report
+        # evidently ≥0.7 moved legacy API under evidently.legacy
+        from evidently.legacy.metric_preset import DataDriftPreset
+        from evidently.legacy.report import Report
 
         report = Report(metrics=[DataDriftPreset()])
         report.run(reference_data=ref, current_data=cur)
@@ -46,37 +44,24 @@ def run(cfg: dict) -> None:
         report.save_html(report_path)
         log.info("Reporte de drift guardado en: %s", report_path)
 
-        # Extract drift summary
         result = report.as_dict()
-        metrics = result.get("metrics", [])
-        dataset_drift = False
-        drifted_cols = []
-
-        for m in metrics:
+        for m in result.get("metrics", []):
             if m.get("metric") == "DatasetDriftMetric":
                 r = m.get("result", {})
                 dataset_drift = r.get("dataset_drift", False)
-                drifted_cols = r.get("number_of_drifted_columns", 0)
+                n_drifted = r.get("number_of_drifted_columns", 0)
                 share = r.get("share_of_drifted_columns", 0.0)
                 log.info(
-                    "Drift detectado: %s | Columnas con drift: %d (%.1f%%)",
-                    dataset_drift, drifted_cols, share * 100,
+                    "Dataset drift: %s | Columnas con drift: %d (%.1f%%)",
+                    dataset_drift, n_drifted, share * 100,
                 )
-
-        if dataset_drift:
-            log.warning(
-                "DRIFT DETECTADO en el dataset. Revisar reporte: %s", report_path
-            )
-            # Non-fatal in training pipeline — just warn
-        else:
-            log.info("Sin drift significativo detectado.")
+                if dataset_drift:
+                    log.warning("DRIFT DETECTADO — revisar reporte: %s", report_path)
+                else:
+                    log.info("Sin drift significativo detectado.")
 
     except ImportError:
-        log.warning("evidently no instalado. Saltando análisis de drift.")
-        log.warning("Instala con: pip install evidently")
-
-        # Fallback: simple statistical summary comparison
-        log.info("Comparación estadística básica (media) train vs test:")
+        log.warning("evidently no disponible. Ejecutando comparación estadística básica.")
         numeric_cols = ref.select_dtypes(include="number").columns
         for col in numeric_cols[:10]:
             train_mean = ref[col].mean()

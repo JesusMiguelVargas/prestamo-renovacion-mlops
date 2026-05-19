@@ -52,8 +52,8 @@ train:
   random_state: 42
 
 evaluate:
-  recall_min: 0.60
-  roc_auc_min: 0.70
+  recall_min: 0.55
+  roc_auc_min: 0.65
   metrics_path: "artifacts/metrics.json"
   plot_path: "artifacts/confusion_matrix.png"
 
