@@ -1,0 +1,84 @@
+version: '3.9'
+
+services:
+
+  # ── Servicio 1: MLflow ────────────────────────────────────────────────────
+  mlflow:
+    image: python:3.10-slim
+    container_name: prestamo-mlflow
+    command: >
+      bash -c "pip install mlflow -q &&
+               mlflow server
+               --backend-store-uri file:///mlruns
+               --host 0.0.0.0
+               --port 5000"
+    ports:
+      - "${MLFLOW_PORT:-5000}:5000"
+    volumes:
+      - mlruns_vol:/mlruns
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
+      interval: 15s
+      timeout: 8s
+      retries: 5
+      start_period: 30s
+    networks:
+      - prestamo-net
+
+  # ── Servicio 2: Trainer ───────────────────────────────────────────────────
+  trainer:
+    build:
+      context: .
+      dockerfile: Dockerfile.trainer
+    container_name: prestamo-trainer
+    env_file: .env.preprod
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    volumes:
+      - artifacts_vol:/app/artifacts
+      - mlruns_vol:/app/mlruns
+      - data_vol:/app/data
+    depends_on:
+      mlflow:
+        condition: service_healthy
+    networks:
+      - prestamo-net
+
+  # ── Servicio 3: API FastAPI ───────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: serve/Dockerfile
+    container_name: prestamo-api
+    ports:
+      - "${API_PORT:-8000}:8000"
+    env_file: .env.preprod
+    environment:
+      - MODEL_PATH=artifacts/model.pkl
+    volumes:
+      - artifacts_vol:/app/artifacts
+    depends_on:
+      trainer:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - prestamo-net
+
+# ── Volúmenes compartidos ─────────────────────────────────────────────────────
+volumes:
+  artifacts_vol:   # model.pkl, metrics.json, confusion_matrix.png
+  mlruns_vol:      # experimentos de MLflow
+  data_vol:        # dataset CSV
+
+# ── Red interna ───────────────────────────────────────────────────────────────
+networks:
+  prestamo-net:
+    driver: bridge

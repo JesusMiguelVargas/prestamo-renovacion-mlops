@@ -1,0 +1,16 @@
+FROM python:3.10-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY _data/       ./_data/
+COPY preprocess/  ./preprocess/
+COPY segregate/   ./segregate/
+COPY train/       ./train/
+COPY evaluate/    ./evaluate/
+COPY config.yaml  .
+
+CMD ["python", "main.py", "--steps", \
+     "download", "preprocess", "segregate", "train", "evaluate"]
