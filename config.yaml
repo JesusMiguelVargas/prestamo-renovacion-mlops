@@ -1,0 +1,66 @@
+data:
+  raw_path: "data/Dataset Renovacion_prestamo.csv"
+  sep: ";"
+  processed_path: "artifacts/data_clean.parquet"
+  train_path: "artifacts/train.parquet"
+  test_path: "artifacts/test.parquet"
+
+preprocessing:
+  target: "FLAG_VENTA"
+  drop_cols:
+    - "CLIENTE"
+    - "MES"
+  numeric_cols:
+    - "LINEA_RENOVADO"
+    - "PLAZO_RENOVADO"
+    - "USO_LINEA_TOTAL_TC_T2"
+    - "USO_TRIM_LINEA_BBVA"
+    - "NR_ENTIDADES_TOTAL_T2"
+    - "DIFF_NRO_ENTIDA_TOTALES_T2_T12"
+    - "SDO_CONSUMO_T2"
+    - "RESENCIA_OFERTA_PLD_RENOVADO"
+    - "Ahorro_Sldo_Bco_T1"
+    - "PConsumo_Sldo_Bco_T1"
+    - "SDO_BCO_tot_sm_pasivo_Bco_6M"
+    - "EDAD"
+    - "ANTIGUEDAD_MES"
+    - "FLAG_LIMA_PROVINCIA"
+    - "SUELDO_ESTIMADO"
+    - "CUBRIR_DEUDA_CONSUMO_SF_RENOVA_PLD"
+  categorical_cols:
+    - "SEXO"
+    - "EST_CIVIL"
+    - "REGION"
+  winsor_low: 0.01
+  winsor_high: 0.99
+
+segregate:
+  test_size: 0.2
+  random_state: 42
+
+train:
+  experiment_name: "prestamo-renovacion-mlops"
+  run_name: "random_forest_gridsearch"
+  model_artifact: "artifacts/model.pkl"
+  param_grid:
+    n_estimators: [100, 200]
+    max_depth: [5, 10]
+    min_samples_split: [2, 5]
+    class_weight: ["balanced"]
+  cv_folds: 5
+  scoring: "recall"
+  random_state: 42
+
+evaluate:
+  recall_min: 0.60
+  roc_auc_min: 0.70
+  metrics_path: "artifacts/metrics.json"
+  plot_path: "artifacts/confusion_matrix.png"
+
+drift:
+  report_path: "artifacts/drift_report.html"
+
+serve:
+  host: "0.0.0.0"
+  port: 8000
+  model_path: "artifacts/model.pkl"

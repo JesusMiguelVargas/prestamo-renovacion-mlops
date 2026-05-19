@@ -1,0 +1,83 @@
+name: ML Pipeline CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      # ── Stage 1: Download ────────────────────────────────────────────────
+      - name: "Etapa 1 — Cargar dataset"
+        run: python _data/run.py
+
+      # ── Stage 2: Preprocess ──────────────────────────────────────────────
+      - name: "Etapa 2 — Preprocesamiento"
+        run: python preprocess/run.py
+
+      # ── Stage 3: Segregate ───────────────────────────────────────────────
+      - name: "Etapa 3 — Split train/test"
+        run: python segregate/run.py
+
+      # ── Stage 4: Check data ──────────────────────────────────────────────
+      - name: "Etapa 4 — Validación de datos (pytest)"
+        run: python -m pytest check_data/ -v --tb=short
+
+      # ── Stage 5: Train ───────────────────────────────────────────────────
+      - name: "Etapa 5 — Entrenamiento + MLflow"
+        run: python train/run.py
+
+      # ── Stage 6: Evaluate ────────────────────────────────────────────────
+      - name: "Etapa 6 — Evaluación + quality gate"
+        run: python evaluate/run.py
+
+      # ── Stage 7: Drift ───────────────────────────────────────────────────
+      - name: "Etapa 7 — Detección de drift"
+        run: python drift/run.py
+
+      # ── Docker build + smoke test ────────────────────────────────────────
+      - name: Build Docker image
+        run: docker build -f serve/Dockerfile -t prestamo-renovacion-api:ci .
+
+      - name: Smoke test — API
+        run: |
+          docker run -d \
+            --name api_smoke \
+            -p 8000:8000 \
+            -v ${{ github.workspace }}/artifacts:/app/artifacts \
+            prestamo-renovacion-api:ci
+          # Wait for API to be ready
+          for i in {1..15}; do
+            curl -sf http://localhost:8000/health && break
+            echo "Esperando API... intento $i"
+            sleep 3
+          done
+          curl -sf http://localhost:8000/health
+          docker stop api_smoke
+
+      # ── Upload artifacts ─────────────────────────────────────────────────
+      - name: Upload métricas y reporte
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pipeline-artifacts
+          path: |
+            artifacts/metrics.json
+            artifacts/confusion_matrix.png
+            artifacts/drift_report.html
