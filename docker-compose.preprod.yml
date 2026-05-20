@@ -7,11 +7,9 @@ services:
     image: python:3.10-slim
     container_name: prestamo-mlflow
     command: >
-      bash -c "pip install 'mlflow==2.14.0' 'gunicorn<22' -q &&
-               mlflow server
-               --backend-store-uri file:///mlruns
-               --host 0.0.0.0
-               --port 5000"
+      bash -c "pip install 'mlflow==2.14.0' -q &&
+               export MLFLOW_TRACKING_URI=file:///mlruns &&
+               gunicorn --bind=0.0.0.0:5000 --timeout=120 --workers=2 mlflow.server:app"
     ports:
       - "${MLFLOW_PORT:-5000}:5000"
     volumes:
