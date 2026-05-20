@@ -1,9 +1,11 @@
 {
   "name": "Prestamo Renovacion MLOps",
-  "image": "mcr.microsoft.com/devcontainers/python:3.10",
+  "image": "mcr.microsoft.com/devcontainers/python:3.10-bookworm",
 
   "features": {
-    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
+      "moby": false
+    }
   },
 
   "postCreateCommand": "pip install -r requirements.txt && cp .env.example .env.preprod",
