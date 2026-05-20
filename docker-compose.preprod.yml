@@ -38,7 +38,6 @@ services:
     volumes:
       - artifacts_vol:/app/artifacts
       - mlruns_vol:/app/mlruns
-      - data_vol:/app/data
     depends_on:
       mlflow:
         condition: service_healthy
@@ -76,7 +75,6 @@ services:
 volumes:
   artifacts_vol:   # model.pkl, metrics.json, confusion_matrix.png
   mlruns_vol:      # experimentos de MLflow
-  data_vol:        # dataset CSV
 
 # ── Red interna ───────────────────────────────────────────────────────────────
 networks:

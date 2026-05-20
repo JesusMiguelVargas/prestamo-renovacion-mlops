@@ -12,6 +12,7 @@ COPY train/       ./train/
 COPY evaluate/    ./evaluate/
 COPY config.yaml  .
 COPY main.py      .
+COPY data/        ./data/
 
 CMD ["python", "main.py", "--steps", \
      "download", "preprocess", "segregate", "train", "evaluate"]
