@@ -7,7 +7,7 @@ services:
     image: python:3.10-slim
     container_name: prestamo-mlflow
     command: >
-      bash -c "pip install 'mlflow==2.14.0' -q &&
+      bash -c "pip install 'mlflow>=2.0,<3.0' -q &&
                export MLFLOW_BACKEND_STORE_URI=file:///mlruns &&
                export MLFLOW_DEFAULT_ARTIFACT_ROOT=file:///mlruns &&
                gunicorn --bind=0.0.0.0:5000 --timeout=120 --workers=2 mlflow.server:app"
