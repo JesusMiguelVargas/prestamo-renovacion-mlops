@@ -2,6 +2,38 @@
 
 Proyecto Final del curso MLOps — Pipeline end-to-end para predicción de renovación de línea de crédito bancaria.
 
+## Inicio Rápido — GitHub Codespaces
+
+### Paso 1 — Abrir el Codespace
+Haz clic en **Code → Codespaces → Create codespace on main**.
+
+Al abrirse, el Codespace ejecuta automáticamente:
+```bash
+pip install -r requirements.txt && cp .env.example .env.preprod
+```
+Espera a que termine (barra de progreso en la terminal).
+
+### Paso 2 — Levantar el stack completo
+```bash
+docker compose -f docker-compose.preprod.yml up --build
+```
+Esto levanta 3 servicios en orden:
+1. **MLflow** (puerto 5000) — servidor de tracking de experimentos
+2. **Trainer** — entrena el modelo (~5 min) y lo guarda en `artifacts/model.pkl`
+3. **API** (puerto 8000) — sirve predicciones con el modelo entrenado
+
+Cuando veas `prestamo-trainer exited with code 0`, todo está listo.
+
+### Paso 3 — Acceder a los servicios
+Abre la pestaña **PUERTOS** en VS Code y haz clic en los links:
+
+| Puerto | Servicio | URL de ejemplo |
+|---|---|---|
+| **8000** | API FastAPI | `/docs` para Swagger UI interactivo |
+| **5000** | MLflow UI | Experimentos y métricas del modelo |
+
+> **Nota:** Si `/docs` da 404, clic derecho en el puerto 8000 → **Visibilidad → Public**.
+
 ## Caso de Uso
 
 **Objetivo:** Predecir si un cliente renovará su línea de crédito, permitiendo al banco focalizar campañas comerciales en los clientes con mayor probabilidad de renovación.
@@ -147,8 +179,8 @@ El pipeline falla automáticamente si el modelo no cumple:
 
 | Métrica | Umbral mínimo |
 |---|---|
-| **Recall** | ≥ 0.60 |
-| **ROC-AUC** | ≥ 0.70 |
+| **Recall** | ≥ 0.55 |
+| **ROC-AUC** | ≥ 0.65 |
 
 ## Autor
 
